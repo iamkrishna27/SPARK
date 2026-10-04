@@ -1,0 +1,4 @@
+Model,Threshold,Group,Screened_Firms,Actual_Non_Adopters,Non_Adoption_Rate,Lift
+Logistic Regression,0.36,Overall Test Set,303,32,0.1056,1.0
+Logistic Regression,0.36,Top 10% Highest Risk,31,15,0.4839,4.58
+Logistic Regression,0.36,Top 20% Highest Risk,61,21,0.3443,3.26

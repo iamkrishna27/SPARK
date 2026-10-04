@@ -1,0 +1,8 @@
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+openpyxl
+jupyter
+statsmodels==0.15.0

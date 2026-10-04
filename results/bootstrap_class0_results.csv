@@ -1,0 +1,4 @@
+Model,Target_Class,Threshold,Metric,Value,CI_Lower_95,CI_Upper_95
+Logistic Regression,Non-Adoption (Class 0),0.36,Precision,0.3519,0.2222,0.4898
+Logistic Regression,Non-Adoption (Class 0),0.36,Recall,0.5938,0.4242,0.7587
+Logistic Regression,Non-Adoption (Class 0),0.36,F1-score,0.4419,0.3014,0.5714

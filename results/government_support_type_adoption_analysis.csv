@@ -1,0 +1,6 @@
+Support_Type,Adopters,Non_Adopters,Non_Adoption_Percent,Chi_Square,Degrees_of_Freedom,P_Value
+Grant,11,2,15.38,19.2481,4,0.000702
+Information,37,8,17.78,19.2481,4,0.000702
+Loan,143,2,1.38,19.2481,4,0.000702
+Tax incentive,143,24,14.37,19.2481,4,0.000702
+Technical assistance,51,6,10.53,19.2481,4,0.000702

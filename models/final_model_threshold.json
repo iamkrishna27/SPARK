@@ -1,0 +1,5 @@
+{
+    "model": "Logistic Regression",
+    "target": "Digital_Payment_Adoption",
+    "threshold": 0.36
+}
