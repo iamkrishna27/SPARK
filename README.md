@@ -1,10 +1,6 @@
 <div align="center">
 
-<img src="spark-banner.png" alt="SPARK - AI-Based FinTech Adoption & Policy Recommendation Platform for SMEs" width="100%"/>
-
-<a href="https://github.com/iamkrishna27/SPARK">
-  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=22&pause=1200&color=2C9CDB&center=true&vCenter=true&width=760&lines=Digital+Payment+Adoption+Prediction+for+SMEs;Logistic+Regression+%2B+Random+Forest+%7C+5-Fold+Stratified+CV;Threshold+Tuning+on+Training+OOF+Predictions;Barrier+Analysis+%E2%86%92+Evidence-Based+Policy+Support" alt="Typing animation"/>
-</a>
+<img src="spark-banner.png" alt="SPARK - AI-Based FinTech Adoption and Policy Recommendation Platform for SMEs" width="100%"/>
 
 <br/>
 
@@ -472,13 +468,10 @@ Fisher's exact test: **Odds Ratio = 2.82, p = 0.0015**
 
 ## 📁 Repository Structure
 
-> Entries marked **(planned)** are not guaranteed to exist yet. Please confirm against your repository and update labels before final submission.
+> Entries marked **(planned)** are not in the repository yet.
 
 ```text
 SPARK/
-│
-├── dataset/
-│   └── README.md                          # how to obtain the official dataset (no raw data committed)
 │
 ├── notebooks/
 │   └── model_training.ipynb               # training, CV, threshold tuning, evaluation, analysis
@@ -492,11 +485,15 @@ SPARK/
 │   ├── threshold_results.csv
 │   └── confusion_matrix.png
 │
-├── papers pep project/
-│   └── research papers / references
+├── dataset/                               # (planned) README on how to obtain the official dataset
+│   └── README.md
+│
+├── papers pep project/                    # (planned) research papers / references
 │
 ├── final_model_threshold.json             # saved final threshold (0.36)
+├── spark-banner.png                       # README banner
 ├── requirements.txt
+├── .gitignore
 │
 └── README.md
 ```
