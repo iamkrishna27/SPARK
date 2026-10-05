@@ -1,6 +1,12 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f2027,50:203a43,100:2c5364&height=220&section=header&text=AI-Based%20FinTech%20Adoption%20%26%20Policy%20Recommendation&fontSize=34&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Platform%20for%20Small%20and%20Medium%20Enterprises%20(SMEs)&descAlignY=60&descSize=18" alt="Project banner" width="100%"/>
+<p align="center">
+  <img src="spark-banner.png.png" alt="SPARK - AI-Based FinTech Adoption and Policy Recommendation Platform" width="100%">
+</p>
+
+# SPARK
+
+### AI-Based FinTech Adoption & Policy Recommendation Platform for SMEs
 
 <a href="https://github.com/iamkrishna27/SPARK">
   <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=22&pause=1200&color=2C9CDB&center=true&vCenter=true&width=760&lines=Digital+Payment+Adoption+Prediction+for+SMEs;Logistic+Regression+%2B+Random+Forest+%7C+5-Fold+Stratified+CV;Threshold+Tuning+on+Training+OOF+Predictions;Barrier+Analysis+%E2%86%92+Evidence-Based+Policy+Support" alt="Typing animation"/>
