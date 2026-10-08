@@ -6,3 +6,4 @@ seaborn
 openpyxl
 jupyter
 statsmodels==0.15.0
+imbalanced-learn
