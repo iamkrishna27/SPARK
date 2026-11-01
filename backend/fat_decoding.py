@@ -24,8 +24,17 @@ A5A_OFFICIAL = {
     11: "Leather goods", 12: "Accommodation", 13: "Bricks", 14: "Cement",
     15: "Iron and Steel", 101: "Other manufacturing", 102: "Other services",
 }
-# Codes that actually occur in your data (the model has only ever seen these)
-A5A_OBSERVED = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 101, 102]
+# All 17 official sector codes from the World Bank FAT India data dictionary.
+# Codes 1, 2, 13, 14, 15 (Agriculture, Livestock, Bricks, Cement, Iron and Steel)
+# were absent from the training data. The sklearn pipeline uses
+# OneHotEncoder(handle_unknown="ignore"), so these sectors are encoded as
+# all-zeros for the a5a feature — the model will still produce a prediction,
+# but accuracy for these five sectors is unvalidated.
+A5A_OBSERVED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 101, 102]
+
+# Sector codes that were absent from the FAT India 2021-2023 training dataset.
+# Predictions for these codes pass through the pipeline but are unvalidated.
+UNVALIDATED_SECTOR_CODES = frozenset({1, 2, 13, 14, 15})
 
 DECODE_MAPS = {
     "a5a": A5A_OFFICIAL,
@@ -106,6 +115,12 @@ def encode_payload(p: dict) -> tuple[dict, list[str]]:
     sector = p["sector"]
     if sector not in SECTOR_TO_CODE:
         raise ValueError(f"sector: {sector!r} not one of {list(SECTOR_TO_CODE)}")
+    if SECTOR_TO_CODE[sector] in UNVALIDATED_SECTOR_CODES:
+        warns.append(
+            f"sector '{sector}' (code {SECTOR_TO_CODE[sector]}) was absent from the "
+            "training data; the model will return a result but its accuracy is unvalidated "
+            "for this sector."
+        )
 
     row = {
         "s7": s7,
@@ -165,4 +180,4 @@ def verify_roundtrip(df: pd.DataFrame, model=None, pos_label=1) -> None:
         p_ref = model.predict_proba(ref[cols])[:, i]
         p_enc = model.predict_proba(enc[cols])[:, i]
         assert (p_ref == p_enc).all(), "probabilities differ after round-trip"
-    print(f"OK: {len(df)} rows round-trip exactly" + (" and give identical probabilities" if model is not None else ""))
+    print(f"OK: {len(df)} rows round-trip exactly" + (" and give identical probabilities" if model is not None else ""))

@@ -1,13 +1,18 @@
 import json
-import pickle
-import sys
+import os
 import sys
 import joblib
 
 from fat_decoding import predict
 
 
-MODEL_PATH = r"D:\FinTech_AI_Project\models\final_random_forest_model.joblib"
+# Resolve model path relative to this script (works on any machine)
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_SCRIPT_DIR)
+MODEL_PATH = os.environ.get(
+    "MODEL_PATH",
+    os.path.join(_PROJECT_ROOT, "models", "final_random_forest_model.joblib"),
+)
 THRESHOLD = 0.33
 
 

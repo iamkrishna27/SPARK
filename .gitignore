@@ -41,3 +41,6 @@ fat_india*.csv
 # =========================
 *.tmp
 *.log
+
+# Backend Node.js dependencies
+backend/node_modules/

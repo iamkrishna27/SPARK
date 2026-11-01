@@ -1,12 +1,17 @@
+require("dotenv").config();
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const { spawn } = require("child_process");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-const PYTHON_PATH = "D:\\FinTech_AI_Project\\venv\\Scripts\\python.exe";
-const ML_SCRIPT_PATH = "D:\\FinTech_AI_Project\\backend\\ml_predict.py";
+// Set PYTHON_PATH in .env (or the environment) to point to your interpreter.
+// Defaults to "python3" which works on Linux/macOS; on Windows with the venv
+// activated, "python" also resolves correctly from PATH.
+const PYTHON_PATH = process.env.PYTHON_PATH || "python3";
+const ML_SCRIPT_PATH = path.join(__dirname, "ml_predict.py");
 
 // Allow requests from the React frontend.
 app.use(cors());
