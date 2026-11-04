@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import joblib
-
+import pickle
 from fat_decoding import predict
 
 

@@ -312,34 +312,21 @@ h1 {
   text-align: right;
 }
 
-.result-card {
-  max-width: 620px;
-  padding: 32px;
-  border: 1px solid #dce9df;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 12px 36px rgba(30, 65, 48, 0.06);
-}
-
 .result-stack {
   display: grid;
-  max-width: 620px;
-  gap: 20px;
+  /* Automatically create two columns on desktop, stacking them on smaller screens */
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 100px;
+  max-width: 1080px;
+  /* Widened to fit both cards comfortably */
+  align-items: start;
+  /* Prevents cards from stretching to match each other's height */
 }
 
 .result-stack .result-card {
   max-width: none;
-}
-
-.result-card .eyebrow {
-  margin-bottom: 12px;
-}
-
-.result-card h2 {
-  margin: 0 0 24px;
-  color: #173a32;
-  font-size: 27px;
-  letter-spacing: -0.7px;
+  height: 100%;
+  /* Keeps both cards at a balanced height if you prefer, or remove for independent heights */
 }
 
 .result-detail {
@@ -371,10 +358,6 @@ h1 {
 .result-probability {
   color: #173a32;
   font-size: 21px;
-}
-
-.result-card .primary-button {
-  margin-top: 22px;
 }
 
 .recommendation-card {
@@ -491,10 +474,6 @@ h1 {
     justify-content: center;
   }
 
-  .result-card {
-    padding: 24px 20px;
-  }
-
   .result-detail {
     align-items: flex-start;
     flex-direction: column;
@@ -507,10 +486,144 @@ h1 {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Result card ---------- */
+.result-card {
+  --accent: #19b6a4;
+  /* ring fill */
+  --accent-strong: #145b48;
+  /* text / badge */
+  --accent-soft: #e6f6f3;
+  /* badge background */
+
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 620px;
+}
+
+.result-card--non-adopter {
+  --accent: #945c35;
+  --accent-strong: #945c35;
+  --accent-soft: #f6ede6;
+}
+
+.result-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.result-card__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.result-card__badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.result-card__hint {
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+/* ---------- Radial probability ring ---------- */
+.ring {
+  position: relative;
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+.ring__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ring__track {
+  fill: none;
+  stroke: #eef2f1;
+  stroke-width: 14;
+}
+
+.ring__fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-dasharray: var(--p) 100;
+  animation: ring-fill 1000ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ring-fill {
+  from {
+    stroke-dasharray: 0 100;
+  }
+
+  to {
+    stroke-dasharray: var(--p) 100;
+  }
+}
+
+.ring__tick {
+  stroke: #0f172a;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.ring__tick-label {
+  font-size: 10px;
+  font-weight: 600;
+  fill: #475569;
+}
+
+.ring__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ring__value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--accent-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.ring__caption {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring__fill {
+    animation: none;
   }
 }

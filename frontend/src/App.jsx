@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import html2pdf from 'html2pdf.js'
+import AssessmentReport from './AssessmentReport'
 import './App.css'
 
 const sectors = [
@@ -97,11 +99,23 @@ const fields = [
   },
 ]
 
+// Ring Constants
+const DECISION_THRESHOLD = 0.33;
+const CX = 100;
+const CY = 100;
+const LABEL_RADIUS = 94;
+
 function App() {
   const [showAssessment, setShowAssessment] = useState(false)
   const [isPredicting, setIsPredicting] = useState(false)
   const [predictionMessage, setPredictionMessage] = useState('')
   const [predictionResult, setPredictionResult] = useState(null)
+
+  // PDF State Variables
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [pdfError, setPdfError] = useState('')
+  const [lastRequestData, setLastRequestData] = useState(null)
+  const reportRef = useRef(null)
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -125,7 +139,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('/api/predict', {
+      const response = await fetch('http://localhost:5000/api/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,16 +152,66 @@ function App() {
         throw new Error('Prediction request failed')
       }
 
+      // Record successful prediction data for the PDF
+      const generatedRefId = `SPARK-${new Date().getTime().toString().slice(-6)}`;
+      setLastRequestData(requestData);
+
       setPredictionResult({
         prediction: result.prediction,
         adopterProbability: result.adopter_probability,
         mainBarrier,
+        recommendation: policyRecommendations[mainBarrier],
+        refId: generatedRefId
       })
     } catch {
       setPredictionMessage('Unable to connect to the prediction service.')
     } finally {
       setIsPredicting(false)
     }
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!reportRef.current) return;
+    setIsDownloading(true);
+    setPdfError('');
+
+    try {
+      const element = reportRef.current;
+      const opt = {
+        margin: 0,
+        filename: `SPARK_Assessment_${predictionResult.refId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().from(element).set(opt).save();
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      setPdfError("Failed to generate PDF report. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Ring Calculation Logic
+  let probability = 0;
+  let percent = 0;
+  let isAdopter = false;
+  let thresholdAngle = 0;
+  let thresholdRad = 0;
+  let labelX = 0;
+  let labelY = 0;
+
+  if (predictionResult) {
+    probability = Math.min(Math.max(predictionResult.adopterProbability, 0), 1);
+    percent = probability * 100;
+    isAdopter = predictionResult.prediction === 'Adopter';
+
+    thresholdAngle = DECISION_THRESHOLD * 360;
+    thresholdRad = (thresholdAngle * Math.PI) / 180;
+    labelX = CX + LABEL_RADIUS * Math.sin(thresholdRad);
+    labelY = CY - LABEL_RADIUS * Math.cos(thresholdRad);
   }
 
   return (
@@ -158,6 +222,13 @@ function App() {
           <span>FinTech for SMEs</span>
         </div>
       </header>
+
+      {/* HIDDEN PDF REPORT COMPONENT */}
+      <AssessmentReport
+        ref={reportRef}
+        predictionResult={predictionResult}
+        requestData={lastRequestData}
+      />
 
       {showAssessment ? (
         <section className="assessment" aria-labelledby="assessment-title">
@@ -180,27 +251,76 @@ function App() {
           {predictionResult ? (
             <div className="result-stack">
               <section
-                className={`result-card ${
-                  predictionResult.prediction === 'Adopter'
-                    ? 'result-adopter'
-                    : 'result-non-adopter'
-                }`}
+                className={`result-card ${isAdopter ? 'result-card--adopter' : 'result-card--non-adopter'}`}
                 aria-labelledby="result-title"
                 aria-live="polite"
               >
-                <p className="eyebrow">ASSESSMENT COMPLETE</p>
-                <h2 id="result-title">Prediction Result</h2>
-                <div className="result-detail">
-                  <span className="result-label">Prediction</span>
-                  <strong className="result-prediction">
-                    {predictionResult.prediction}
-                  </strong>
+                <header className="result-card__header">
+                  <h3 className="result-card__title">Prediction Result</h3>
+                  <span className="result-card__badge">{predictionResult.prediction}</span>
+                </header>
+
+                <div className="ring">
+                  <svg
+                    className="ring__svg"
+                    viewBox="-5 0 210 200"
+                    role="img"
+                    aria-label={`Adoption probability ${percent.toFixed(2)} percent, ${predictionResult.prediction}. Decision threshold ${Math.round(DECISION_THRESHOLD * 100)} percent.`}
+                  >
+                    <circle className="ring__track" cx={CX} cy={CY} r="70" />
+
+                    {percent > 0 && (
+                      <circle
+                        key={percent} /* re-triggers the animation on a new result */
+                        className="ring__fill"
+                        cx={CX}
+                        cy={CY}
+                        r="70"
+                        pathLength="100"
+                        transform={`rotate(-90 ${CX} ${CY})`}
+                        style={{ '--p': String(percent) }}
+                      />
+                    )}
+
+                    <line
+                      className="ring__tick"
+                      x1={CX}
+                      y1="16"
+                      x2={CX}
+                      y2="44"
+                      transform={`rotate(${thresholdAngle} ${CX} ${CY})`}
+                    />
+                    <text
+                      className="ring__tick-label"
+                      x={labelX}
+                      y={labelY}
+                      textAnchor={Math.sin(thresholdRad) >= 0 ? 'start' : 'end'}
+                      dominantBaseline="middle"
+                    >
+                      {Math.round(DECISION_THRESHOLD * 100)}%
+                    </text>
+                  </svg>
+
+                  <div className="ring__center">
+                    <span className="ring__value">{percent.toFixed(2)}%</span>
+                  </div>
                 </div>
-                <div className="result-detail">
-                  <span className="result-label">Adoption Probability</span>
-                  <strong className="result-probability">
-                    {(predictionResult.adopterProbability * 100).toFixed(2)}%
-                  </strong>
+                <p className="result-card__hint">
+                  The Random Forest model predicts adoption likelihood based on 10 specific firm-level features. A score at or above {Math.round(DECISION_THRESHOLD * 100)}% is classified as an Adopter.
+                </p>
+
+                {/* PDF DOWNLOAD BUTTON & ERROR MSG */}
+                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={isDownloading}
+                    style={{ width: '100%', justifyContent: 'center', background: '#10243B', color: 'white' }}
+                  >
+                    {isDownloading ? 'Generating PDF...' : 'Download Assessment Report'}
+                  </button>
+                  {pdfError && <span style={{ color: '#945c35', fontSize: '13px', textAlign: 'center' }}>{pdfError}</span>}
                 </div>
               </section>
 
@@ -219,7 +339,7 @@ function App() {
                 <div className="recommendation-action">
                   <span className="result-label">Recommended Action</span>
                   <p>
-                    {policyRecommendations[predictionResult.mainBarrier]}
+                    {predictionResult.recommendation}
                   </p>
                 </div>
                 <button
@@ -236,52 +356,52 @@ function App() {
               </section>
             </div>
           ) : (
-          <form className="assessment-form" onSubmit={handleSubmit}>
-            <div className="form-grid">
-              {fields.map((field) => (
-                <div className="form-field" key={field.name}>
-                  <label htmlFor={field.name}>{field.label}</label>
-                  {field.options ? (
-                    <select id={field.name} name={field.name} required defaultValue="">
-                      <option value="" disabled>
-                        Select an option
-                      </option>
-                      {field.options.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
+            <form className="assessment-form" onSubmit={handleSubmit}>
+              <div className="form-grid">
+                {fields.map((field) => (
+                  <div className="form-field" key={field.name}>
+                    <label htmlFor={field.name}>{field.label}</label>
+                    {field.options ? (
+                      <select id={field.name} name={field.name} required defaultValue="">
+                        <option value="" disabled>
+                          Select an option
                         </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      id={field.name}
-                      name={field.name}
-                      type="number"
-                      min={field.min}
-                      max={field.max}
-                      step={field.step}
-                      required
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="form-actions">
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={isPredicting}
-              >
-                {isPredicting ? 'Predicting...' : 'Predict Adoption'}
-                {!isPredicting && <span aria-hidden="true">→</span>}
-              </button>
-            </div>
-            {predictionMessage && (
-              <p className="prediction-message" role="status">
-                {predictionMessage}
-              </p>
-            )}
-          </form>
+                        {field.options.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        type="number"
+                        min={field.min}
+                        max={field.max}
+                        step={field.step}
+                        required
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="form-actions">
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={isPredicting}
+                >
+                  {isPredicting ? 'Predicting...' : 'Predict Adoption'}
+                  {!isPredicting && <span aria-hidden="true">→</span>}
+                </button>
+              </div>
+              {predictionMessage && (
+                <p className="prediction-message" role="status">
+                  {predictionMessage}
+                </p>
+              )}
+            </form>
           )}
         </section>
       ) : (
@@ -326,4 +446,4 @@ function App() {
   )
 }
 
-export default App
+export default App  

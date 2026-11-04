@@ -1,0 +1,366 @@
+﻿backend/fat_decoding.py:1: trailing whitespace.
++"""
+backend/fat_decoding.py:2: trailing whitespace.
++fat_decoding.py
+backend/fat_decoding.py:3: trailing whitespace.
++Decoding / encoding layer for the 10 Random Forest features.
+backend/fat_decoding.py:4: trailing whitespace.
++Code meanings: World Bank Microdata Library, FAT India 2021-2023 (catalog 8230),
+backend/fat_decoding.py:5: trailing whitespace.
++data dictionary F1, variable pages V18 (a5a), V889 (d3a), V891 (d3c),
+backend/fat_decoding.py:6: trailing whitespace.
++V907 (d7a), V908 (d7b), V94 (b13b5).
+backend/fat_decoding.py:7: trailing whitespace.
++
+backend/fat_decoding.py:8: trailing whitespace.
++The trained model is NOT touched. Raw codes stay as the model saw them.
+backend/fat_decoding.py:9: trailing whitespace.
++"""
+backend/fat_decoding.py:10: trailing whitespace.
++from __future__ import annotations
+backend/fat_decoding.py:11: trailing whitespace.
++import pandas as pd
+backend/fat_decoding.py:12: trailing whitespace.
++
+backend/fat_decoding.py:13: trailing whitespace.
++MODEL_FEATURES = ["s7", "a6", "d3c", "a5a", "b5f_decoded", "b5g_decoded",
+backend/fat_decoding.py:14: trailing whitespace.
++                  "d3a", "d7a", "d7b", "b13b5"]
+backend/fat_decoding.py:15: trailing whitespace.
++
+backend/fat_decoding.py:16: trailing whitespace.
++# ---------------------------------------------------------------- official maps
+backend/fat_decoding.py:17: trailing whitespace.
++# Shared official scheme on d3a/d7a/d7b/b13b5: 1 Yes, 2 No, -9 Don't Know, -7 Not Applicable
+backend/fat_decoding.py:18: trailing whitespace.
++YES_NO_OFFICIAL = {1: "Yes", 2: "No", -9: "Don't know", -7: "Not applicable"}
+backend/fat_decoding.py:19: trailing whitespace.
++
+backend/fat_decoding.py:20: trailing whitespace.
++A5A_OFFICIAL = {
+backend/fat_decoding.py:21: trailing whitespace.
++    1: "Agriculture", 2: "Livestock", 3: "Food Processing", 4: "Wearing apparel",
+backend/fat_decoding.py:22: trailing whitespace.
++    5: "Motor vehicles", 6: "Pharmaceuticals", 7: "Wholesale or retail",
+backend/fat_decoding.py:23: trailing whitespace.
++    8: "Financial services", 9: "Land transport", 10: "Health services",
+backend/fat_decoding.py:24: trailing whitespace.
++    11: "Leather goods", 12: "Accommodation", 13: "Bricks", 14: "Cement",
+backend/fat_decoding.py:25: trailing whitespace.
++    15: "Iron and Steel", 101: "Other manufacturing", 102: "Other services",
+backend/fat_decoding.py:26: trailing whitespace.
++}
+backend/fat_decoding.py:27: trailing whitespace.
++# All 17 official sector codes from the World Bank FAT India data dictionary.
+backend/fat_decoding.py:28: trailing whitespace.
++# Codes 1, 2, 13, 14, 15 (Agriculture, Livestock, Bricks, Cement, Iron and Steel)
+backend/fat_decoding.py:29: trailing whitespace.
++# were absent from the training data. The sklearn pipeline uses
+backend/fat_decoding.py:30: trailing whitespace.
++# OneHotEncoder(handle_unknown="ignore"), so these sectors are encoded as
+backend/fat_decoding.py:31: trailing whitespace.
++# all-zeros for the a5a feature ΓÇö the model will still produce a prediction,
+backend/fat_decoding.py:32: trailing whitespace.
++# but accuracy for these five sectors is unvalidated.
+backend/fat_decoding.py:33: trailing whitespace.
++A5A_OBSERVED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 101, 102]
+backend/fat_decoding.py:34: trailing whitespace.
++
+backend/fat_decoding.py:35: trailing whitespace.
++# Sector codes that were absent from the FAT India 2021-2023 training dataset.
+backend/fat_decoding.py:36: trailing whitespace.
++# Predictions for these codes pass through the pipeline but are unvalidated.
+backend/fat_decoding.py:37: trailing whitespace.
++UNVALIDATED_SECTOR_CODES = frozenset({1, 2, 13, 14, 15})
+backend/fat_decoding.py:38: trailing whitespace.
++
+backend/fat_decoding.py:39: trailing whitespace.
++DECODE_MAPS = {
+backend/fat_decoding.py:40: trailing whitespace.
++    "a5a": A5A_OFFICIAL,
+backend/fat_decoding.py:41: trailing whitespace.
++    "d3a": YES_NO_OFFICIAL,
+backend/fat_decoding.py:42: trailing whitespace.
++    "d7a": YES_NO_OFFICIAL,
+backend/fat_decoding.py:43: trailing whitespace.
++    "d7b": YES_NO_OFFICIAL,
+backend/fat_decoding.py:44: trailing whitespace.
++    "b13b5": YES_NO_OFFICIAL,
+backend/fat_decoding.py:45: trailing whitespace.
++}
+backend/fat_decoding.py:46: trailing whitespace.
++
+backend/fat_decoding.py:47: trailing whitespace.
++
+backend/fat_decoding.py:48: trailing whitespace.
++def decode_columns(df: pd.DataFrame) -> pd.DataFrame:
+backend/fat_decoding.py:49: trailing whitespace.
++    """Add *_decoded columns. Originals are kept. Raises on any unmapped code."""
+backend/fat_decoding.py:50: trailing whitespace.
++    out = df.copy()
+backend/fat_decoding.py:51: trailing whitespace.
++    for col, mp in DECODE_MAPS.items():
+backend/fat_decoding.py:52: trailing whitespace.
++        bad = sorted(set(out[col].dropna().unique()) - set(mp))
+backend/fat_decoding.py:53: trailing whitespace.
++        if bad:
+backend/fat_decoding.py:54: trailing whitespace.
++            raise ValueError(f"{col}: codes not in official codebook: {bad}")
+backend/fat_decoding.py:55: trailing whitespace.
++        out[f"{col}_decoded"] = out[col].map(mp)
+backend/fat_decoding.py:56: trailing whitespace.
++
+backend/fat_decoding.py:57: trailing whitespace.
++    # d3c: the codebook gives a label ("No. - needed to borrow but not get it")
+backend/fat_decoding.py:58: trailing whitespace.
++    # and a name only for -9 (Don't Know). All other values are plain numbers,
+backend/fat_decoding.py:59: trailing whitespace.
++    # NOT categories. So: numeric count, with -9 -> missing + explicit flag.
+backend/fat_decoding.py:60: trailing whitespace.
++    c = out["d3c"]
+backend/fat_decoding.py:61: trailing whitespace.
++    out["d3c_dont_know"] = c.eq(-9)
+backend/fat_decoding.py:62: trailing whitespace.
++    out["d3c_decoded"] = c.where(c.ne(-9)).astype("Int64")
+backend/fat_decoding.py:63: trailing whitespace.
++    return out
+backend/fat_decoding.py:64: trailing whitespace.
++
+backend/fat_decoding.py:65: trailing whitespace.
++
+backend/fat_decoding.py:66: trailing whitespace.
++# ------------------------------------------------------- frontend <-> model
+backend/fat_decoding.py:67: trailing whitespace.
++FE_YES_NO = ["Yes", "No"]
+backend/fat_decoding.py:68: trailing whitespace.
++FE_YES_NO_DK = ["Yes", "No", "Don't know"]
+backend/fat_decoding.py:69: trailing whitespace.
++_FE_TO_RAW = {"Yes": 1, "No": 2, "Don't know": -9}
+backend/fat_decoding.py:70: trailing whitespace.
++
+backend/fat_decoding.py:71: trailing whitespace.
++# b5f_decoded / b5g_decoded were fed to the model as these strings
+backend/fat_decoding.py:72: trailing whitespace.
++# (per your CSV: b5f Yes/No, b5g Yes/No/Don't Know). Verified at runtime below.
+backend/fat_decoding.py:73: trailing whitespace.
++_FE_TO_B5G = {"Yes": "Yes", "No": "No", "Don't know": "Don't Know"}
+backend/fat_decoding.py:74: trailing whitespace.
++_FE_TO_B5F = {"Yes": "Yes", "No": "No"}
+backend/fat_decoding.py:75: trailing whitespace.
++
+backend/fat_decoding.py:76: trailing whitespace.
++SECTOR_TO_CODE = {A5A_OFFICIAL[c]: c for c in A5A_OBSERVED}
+backend/fat_decoding.py:77: trailing whitespace.
++
+backend/fat_decoding.py:78: trailing whitespace.
++FRONTEND_SCHEMA = {
+backend/fat_decoding.py:79: trailing whitespace.
++    "employees":                 {"type": "integer", "min": 5, "max": 4000},   # s7
+backend/fat_decoding.py:80: trailing whitespace.
++    "year_started":              {"type": "year", "dont_know_allowed": True},  # a6
+backend/fat_decoding.py:81: trailing whitespace.
++    "sector":                    {"type": "dropdown", "options": list(SECTOR_TO_CODE)},  # a5a
+backend/fat_decoding.py:82: trailing whitespace.
++    "loan_needed_not_received_count": {"type": "integer", "min": 0, "dont_know_allowed": True},  # d3c
+backend/fat_decoding.py:83: trailing whitespace.
++    "has_website":               {"type": "yes_no", "options": FE_YES_NO},       # b5f
+backend/fat_decoding.py:84: trailing whitespace.
++    "uses_social_media":         {"type": "yes_no_dk", "options": FE_YES_NO_DK},  # b5g
+backend/fat_decoding.py:85: trailing whitespace.
++    "financed_equipment":        {"type": "yes_no_dk", "options": FE_YES_NO_DK},  # d3a
+backend/fat_decoding.py:86: trailing whitespace.
++    "aware_gov_support":         {"type": "yes_no", "options": FE_YES_NO},       # d7a (no -9 in data)
+backend/fat_decoding.py:87: trailing whitespace.
++    "benefited_gov_support":     {"type": "yes_no_dk", "options": FE_YES_NO_DK},  # d7b
+backend/fat_decoding.py:88: trailing whitespace.
++    "sells_via_own_website":     {"type": "yes_no_dk", "options": FE_YES_NO_DK},  # b13b5
+backend/fat_decoding.py:89: trailing whitespace.
++}
+backend/fat_decoding.py:90: trailing whitespace.
++
+backend/fat_decoding.py:91: trailing whitespace.
++
+backend/fat_decoding.py:92: trailing whitespace.
++def _yn(value: str, allowed: list[str], field: str) -> str:
+backend/fat_decoding.py:93: trailing whitespace.
++    if value not in allowed:
+backend/fat_decoding.py:94: trailing whitespace.
++        raise ValueError(f"{field}: {value!r} not in {allowed}")
+backend/fat_decoding.py:95: trailing whitespace.
++    return value
+backend/fat_decoding.py:96: trailing whitespace.
++
+backend/fat_decoding.py:97: trailing whitespace.
++
+backend/fat_decoding.py:98: trailing whitespace.
++def encode_payload(p: dict) -> tuple[dict, list[str]]:
+backend/fat_decoding.py:99: trailing whitespace.
++    """Frontend payload -> exact raw/model representation. Returns (row, warnings)."""
+backend/fat_decoding.py:100: trailing whitespace.
++    warns: list[str] = []
+backend/fat_decoding.py:101: trailing whitespace.
++    s7 = int(p["employees"])
+backend/fat_decoding.py:102: trailing whitespace.
++    if not 5 <= s7 <= 4000:
+backend/fat_decoding.py:103: trailing whitespace.
++        warns.append(f"employees={s7} outside training range 5-4000")
+backend/fat_decoding.py:104: trailing whitespace.
++
+backend/fat_decoding.py:105: trailing whitespace.
++    year = p.get("year_started")
+backend/fat_decoding.py:106: trailing whitespace.
++    a6 = -9 if year is None else int(year)
+backend/fat_decoding.py:107: trailing whitespace.
++    if year is not None and year > 2017:
+backend/fat_decoding.py:108: trailing whitespace.
++        warns.append(f"year_started={year} later than any training firm (max 2017)")
+backend/fat_decoding.py:109: trailing whitespace.
++
+backend/fat_decoding.py:110: trailing whitespace.
++    cnt = p.get("loan_needed_not_received_count")
+backend/fat_decoding.py:111: trailing whitespace.
++    d3c = -9 if cnt is None else int(cnt)
+backend/fat_decoding.py:112: trailing whitespace.
++    if cnt is not None and not 0 <= d3c <= 31:
+backend/fat_decoding.py:113: trailing whitespace.
++        warns.append(f"d3c={d3c} outside training range 0-31")
+backend/fat_decoding.py:114: trailing whitespace.
++
+backend/fat_decoding.py:115: trailing whitespace.
++    sector = p["sector"]
+backend/fat_decoding.py:116: trailing whitespace.
++    if sector not in SECTOR_TO_CODE:
+backend/fat_decoding.py:117: trailing whitespace.
++        raise ValueError(f"sector: {sector!r} not one of {list(SECTOR_TO_CODE)}")
+backend/fat_decoding.py:118: trailing whitespace.
++    if SECTOR_TO_CODE[sector] in UNVALIDATED_SECTOR_CODES:
+backend/fat_decoding.py:119: trailing whitespace.
++        warns.append(
+backend/fat_decoding.py:120: trailing whitespace.
++            f"sector '{sector}' (code {SECTOR_TO_CODE[sector]}) was absent from the "
+backend/fat_decoding.py:121: trailing whitespace.
++            "training data; the model will return a result but its accuracy is unvalidated "
+backend/fat_decoding.py:122: trailing whitespace.
++            "for this sector."
+backend/fat_decoding.py:123: trailing whitespace.
++        )
+backend/fat_decoding.py:124: trailing whitespace.
++
+backend/fat_decoding.py:125: trailing whitespace.
++    row = {
+backend/fat_decoding.py:126: trailing whitespace.
++        "s7": s7,
+backend/fat_decoding.py:127: trailing whitespace.
++        "a6": a6,
+backend/fat_decoding.py:128: trailing whitespace.
++        "d3c": d3c,
+backend/fat_decoding.py:129: trailing whitespace.
++        "a5a": SECTOR_TO_CODE[sector],
+backend/fat_decoding.py:130: trailing whitespace.
++        "b5f_decoded": _FE_TO_B5F[_yn(p["has_website"], FE_YES_NO, "has_website")],
+backend/fat_decoding.py:131: trailing whitespace.
++        "b5g_decoded": _FE_TO_B5G[_yn(p["uses_social_media"], FE_YES_NO_DK, "uses_social_media")],
+backend/fat_decoding.py:132: trailing whitespace.
++        "d3a": _FE_TO_RAW[_yn(p["financed_equipment"], FE_YES_NO_DK, "financed_equipment")],
+backend/fat_decoding.py:133: trailing whitespace.
++        "d7a": _FE_TO_RAW[_yn(p["aware_gov_support"], FE_YES_NO, "aware_gov_support")],
+backend/fat_decoding.py:134: trailing whitespace.
++        "d7b": _FE_TO_RAW[_yn(p["benefited_gov_support"], FE_YES_NO_DK, "benefited_gov_support")],
+backend/fat_decoding.py:135: trailing whitespace.
++        "b13b5": _FE_TO_RAW[_yn(p["sells_via_own_website"], FE_YES_NO_DK, "sells_via_own_website")],
+backend/fat_decoding.py:136: trailing whitespace.
++    }
+backend/fat_decoding.py:137: trailing whitespace.
++    return row, warns
+backend/fat_decoding.py:138: trailing whitespace.
++
+backend/fat_decoding.py:139: trailing whitespace.
++
+backend/fat_decoding.py:140: trailing whitespace.
++def predict(model, payload: dict, threshold: float = 0.33, pos_label=1) -> dict:
+backend/fat_decoding.py:141: trailing whitespace.
++    """pos_label = the class value your model uses for Adopter (check model.classes_)."""
+backend/fat_decoding.py:142: trailing whitespace.
++    row, warns = encode_payload(payload)
+backend/fat_decoding.py:143: trailing whitespace.
++    cols = list(getattr(model, "feature_names_in_", MODEL_FEATURES))
+backend/fat_decoding.py:144: trailing whitespace.
++    X = pd.DataFrame([row])[cols]
+backend/fat_decoding.py:145: trailing whitespace.
++    p = float(model.predict_proba(X)[0][list(model.classes_).index(pos_label)])
+backend/fat_decoding.py:146: trailing whitespace.
++    return {"probability": p, "threshold": threshold,
+backend/fat_decoding.py:147: trailing whitespace.
++            "label": "Adopter" if p >= threshold else "Non-Adopter",
+backend/fat_decoding.py:148: trailing whitespace.
++            "warnings": warns, "model_input": row}
+backend/fat_decoding.py:149: trailing whitespace.
++
+backend/fat_decoding.py:150: trailing whitespace.
++
+backend/fat_decoding.py:151: trailing whitespace.
++# ------------------------------------------------------------ verification
+backend/fat_decoding.py:152: trailing whitespace.
++def row_to_payload(r: pd.Series) -> dict:
+backend/fat_decoding.py:153: trailing whitespace.
++    """Rebuild what the frontend would have sent, from an existing CSV row."""
+backend/fat_decoding.py:154: trailing whitespace.
++    to_fe = {1: "Yes", 2: "No", -9: "Don't know"}
+backend/fat_decoding.py:155: trailing whitespace.
++    return {
+backend/fat_decoding.py:156: trailing whitespace.
++        "employees": int(r["s7"]),
+backend/fat_decoding.py:157: trailing whitespace.
++        "year_started": None if r["a6"] == -9 else int(r["a6"]),
+backend/fat_decoding.py:158: trailing whitespace.
++        "sector": A5A_OFFICIAL[int(r["a5a"])],
+backend/fat_decoding.py:159: trailing whitespace.
++        "loan_needed_not_received_count": None if r["d3c"] == -9 else int(r["d3c"]),
+backend/fat_decoding.py:160: trailing whitespace.
++        "has_website": r["b5f_decoded"],
+backend/fat_decoding.py:161: trailing whitespace.
++        "uses_social_media": "Don't know" if r["b5g_decoded"] == "Don't Know" else r["b5g_decoded"],
+backend/fat_decoding.py:162: trailing whitespace.
++        "financed_equipment": to_fe[int(r["d3a"])],
+backend/fat_decoding.py:163: trailing whitespace.
++        "aware_gov_support": to_fe[int(r["d7a"])],
+backend/fat_decoding.py:164: trailing whitespace.
++        "benefited_gov_support": to_fe[int(r["d7b"])],
+backend/fat_decoding.py:165: trailing whitespace.
++        "sells_via_own_website": to_fe[int(r["b13b5"])],
+backend/fat_decoding.py:166: trailing whitespace.
++    }
+backend/fat_decoding.py:167: trailing whitespace.
++
+backend/fat_decoding.py:168: trailing whitespace.
++
+backend/fat_decoding.py:169: trailing whitespace.
++def verify_roundtrip(df: pd.DataFrame, model=None, pos_label=1) -> None:
+backend/fat_decoding.py:170: trailing whitespace.
++    """decode -> frontend payload -> encode must reproduce every training row exactly;
+backend/fat_decoding.py:171: trailing whitespace.
++    optionally also confirms identical model probabilities."""
+backend/fat_decoding.py:172: trailing whitespace.
++    rows = [encode_payload(row_to_payload(r))[0] for _, r in df.iterrows()]
+backend/fat_decoding.py:173: trailing whitespace.
++    enc = pd.DataFrame(rows)[MODEL_FEATURES]
+backend/fat_decoding.py:174: trailing whitespace.
++    ref = df[MODEL_FEATURES].reset_index(drop=True)
+backend/fat_decoding.py:175: trailing whitespace.
++    mism = (enc.astype(object) != ref.astype(object))
+backend/fat_decoding.py:176: trailing whitespace.
++    assert not mism.to_numpy().any(), f"round-trip mismatch in: {list(mism.columns[mism.any()])}"
+backend/fat_decoding.py:177: trailing whitespace.
++    if model is not None:
+backend/fat_decoding.py:178: trailing whitespace.
++        cols = list(getattr(model, "feature_names_in_", MODEL_FEATURES))
+backend/fat_decoding.py:179: trailing whitespace.
++        i = list(model.classes_).index(pos_label)
+backend/fat_decoding.py:180: trailing whitespace.
++        p_ref = model.predict_proba(ref[cols])[:, i]
+backend/fat_decoding.py:181: trailing whitespace.
++        p_enc = model.predict_proba(enc[cols])[:, i]
+backend/fat_decoding.py:182: trailing whitespace.
++        assert (p_ref == p_enc).all(), "probabilities differ after round-trip"
+backend/fat_decoding.py:183: trailing whitespace.
++    print(f"OK: {len(df)} rows round-trip exactly" + (" and give identical probabilities" if model is not None else ""))
