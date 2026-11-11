@@ -117,6 +117,30 @@ function App() {
   const [lastRequestData, setLastRequestData] = useState(null)
   const reportRef = useRef(null)
 
+  // Hero glass-card tilt (purely visual)
+  const tiltRef = useRef(null)
+
+  function handleTiltMove(event) {
+    const card = tiltRef.current
+    if (!card) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = (event.clientX - rect.left) / rect.width
+    const y = (event.clientY - rect.top) / rect.height
+    card.style.setProperty('--ry', `${((x - 0.5) * 24).toFixed(2)}deg`)
+    card.style.setProperty('--rx', `${((0.5 - y) * 24).toFixed(2)}deg`)
+    card.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`)
+    card.style.setProperty('--my', `${(y * 100).toFixed(1)}%`)
+  }
+
+  function handleTiltLeave() {
+    const card = tiltRef.current
+    if (!card) return
+    card.style.setProperty('--ry', '0deg')
+    card.style.setProperty('--rx', '0deg')
+    card.style.setProperty('--mx', '30%')
+    card.style.setProperty('--my', '18%')
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
     setIsPredicting(true)
@@ -216,6 +240,12 @@ function App() {
 
   return (
     <main className="page">
+      <div className="bg-orbs" aria-hidden="true">
+        <span className="orb orb-1" />
+        <span className="orb orb-2" />
+        <span className="orb orb-3" />
+      </div>
+
       <header className="site-header">
         <div className="brand" aria-label="FinTech for SMEs">
           <span className="brand-mark" aria-hidden="true">F</span>
@@ -310,17 +340,16 @@ function App() {
                 </p>
 
                 {/* PDF DOWNLOAD BUTTON & ERROR MSG */}
-                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="download-block">
                   <button
-                    className="primary-button"
+                    className="primary-button download-button"
                     type="button"
                     onClick={handleDownloadPDF}
                     disabled={isDownloading}
-                    style={{ width: '100%', justifyContent: 'center', background: '#10243B', color: 'white' }}
                   >
                     {isDownloading ? 'Generating PDF...' : 'Download Assessment Report'}
                   </button>
-                  {pdfError && <span style={{ color: '#945c35', fontSize: '13px', textAlign: 'center' }}>{pdfError}</span>}
+                  {pdfError && <span className="pdf-error">{pdfError}</span>}
                 </div>
               </section>
 
@@ -425,12 +454,23 @@ function App() {
             </button>
           </div>
 
-          <div className="hero-art" aria-hidden="true">
-            <div className="art-ring art-ring-outer" />
-            <div className="art-ring art-ring-inner" />
-            <div className="art-center">
-              <span className="art-spark">✦</span>
-              <span className="art-caption">SME</span>
+          <div
+            className="hero-art"
+            aria-hidden="true"
+            onMouseMove={handleTiltMove}
+            onMouseLeave={handleTiltLeave}
+          >
+            <div className="art-glow" />
+            <div className="glass-card" ref={tiltRef}>
+              <div className="glass-card__shine" />
+              <div className="glass-card__top">
+                <span className="art-spark">✦</span>
+                <span className="glass-card__chip" />
+              </div>
+              <div className="glass-card__bottom">
+                <span className="art-caption">SME</span>
+                <span className="glass-card__brand">SPARK</span>
+              </div>
             </div>
             <span className="art-dot art-dot-one" />
             <span className="art-dot art-dot-two" />
